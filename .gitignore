@@ -1,0 +1,43 @@
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Go build & test artifacts
+.gocache/
+bin/
+tmp/
+*.exe
+*.test
+*.out
+coverage.out
+coverage.html
+backend/bin/
+backend/tmp/
+
+# Node & Next.js artifacts
+node_modules/
+.next/
+out/
+build/
+dist/
+.npm
+.eslintcache
+frontend/node_modules/
+frontend/.next/
+frontend/out/
+frontend/build/
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Editor & OS files
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
