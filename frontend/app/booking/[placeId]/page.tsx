@@ -3,7 +3,7 @@
 import React, { FormEvent, useState, useEffect } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { ArrowLeft, Calendar, Clock, FileText, Loader } from "lucide-react";
+import { ArrowLeft, Calendar, Clock, FileText, Loader, CheckCircle2, AlertCircle, CreditCard } from "lucide-react";
 import { createBooking, getPlace, PlaceResponse } from "../../../lib/api";
 import BrandMark from "../../../components/BrandMark";
 
@@ -19,7 +19,9 @@ export default function BookingPage() {
   const [notes, setNotes] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [success, setSuccess] = useState(false);
+  const [step, setStep] = useState<"booking" | "payment">("booking");
 
   useEffect(() => {
     if (!placeId) return;
@@ -52,6 +54,44 @@ export default function BookingPage() {
   };
 
   const totalAmount = calculateTotal();
+
+  const validateField = (field: string, value: string) => {
+    const errors = { ...fieldErrors };
+    
+    switch (field) {
+      case "bookingDate":
+        if (!value) {
+          errors.bookingDate = "Booking date is required";
+        } else if (new Date(value) < new Date(new Date().setHours(0, 0, 0, 0))) {
+          errors.bookingDate = "Date cannot be in the past";
+        } else {
+          delete errors.bookingDate;
+        }
+        break;
+      case "startTime":
+        if (!value) {
+          errors.startTime = "Start time is required";
+        } else {
+          delete errors.startTime;
+        }
+        break;
+      case "endTime":
+        if (!value) {
+          errors.endTime = "End time is required";
+        } else if (calculateDuration() <= 0) {
+          errors.endTime = "End time must be after start time";
+        } else {
+          delete errors.endTime;
+        }
+        break;
+    }
+    
+    setFieldErrors(errors);
+  };
+
+  const isBookingValid = () => {
+    return bookingDate && startTime && endTime && duration > 0 && Object.keys(fieldErrors).length === 0;
+  };
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -86,20 +126,20 @@ export default function BookingPage() {
 
   if (!place && !error) {
     return (
-      <div className="min-h-screen bg-[#FAF9F6] dark:bg-[#020617] flex items-center justify-center">
-        <Loader className="w-8 h-8 animate-spin text-[#063C2F] dark:text-[#14B8A6]" />
+      <div className="min-h-screen bg-[#FAF5FF] dark:bg-[#020617] flex items-center justify-center">
+        <Loader className="w-8 h-8 animate-spin text-[#7C3AED]" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#FAF9F6] dark:bg-[#020617]">
-      <header className="border-b border-[#E7E5DE] dark:border-[#334155] bg-[#FAF9F6] dark:bg-[#0E1223]">
+    <div className="min-h-screen bg-[#FAF5FF] dark:bg-[#020617]">
+      <header className="border-b border-[#DDD6FE] dark:border-[#334155] bg-white dark:bg-[#0E1223]">
         <div className="mx-auto flex h-20 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
           <BrandMark />
           <Link
             href="/explore"
-            className="flex items-center gap-2 text-sm font-medium text-[#111512] dark:text-[#F8FAFC] hover:text-[#063C2F] dark:hover:text-[#14B8A6]"
+            className="flex items-center gap-2 text-sm font-medium text-[#4C1D95] dark:text-[#F8FAFC] hover:text-[#7C3AED] dark:hover:text-[#A78BFA] transition-colors duration-200"
           >
             <ArrowLeft className="w-4 h-4" />
             Back to Explore
@@ -107,140 +147,144 @@ export default function BookingPage() {
         </div>
       </header>
 
-      <main className="mx-auto max-w-3xl px-4 py-12 sm:px-6 lg:px-8">
+      <main className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
         {error && !success && (
-          <div className="mb-6 p-4 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800">
-            <p className="text-sm text-red-700 dark:text-red-300">{error}</p>
+          <div className="mb-6 mx-auto max-w-3xl animate-in fade-in slide-in-from-top-2 duration-300">
+            <div className="flex items-start gap-3 rounded-2xl bg-[#FEE2E2] dark:bg-red-900/20 border-2 border-[#DC2626] p-4">
+              <AlertCircle className="h-5 w-5 text-[#DC2626] flex-shrink-0 mt-0.5" />
+              <p className="text-sm font-medium text-[#DC2626]">{error}</p>
+            </div>
           </div>
         )}
 
         {success && (
-          <div className="mb-6 p-4 rounded-lg bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800">
-            <p className="text-sm text-green-700 dark:text-green-300">Booking created successfully! Redirecting...</p>
+          <div className="mb-6 mx-auto max-w-3xl animate-in fade-in slide-in-from-top-2 duration-300">
+            <div className="flex items-start gap-3 rounded-2xl bg-[#D1FAE5] dark:bg-green-900/20 border-2 border-[#16A34A] p-4">
+              <CheckCircle2 className="h-5 w-5 text-[#16A34A] flex-shrink-0 mt-0.5" />
+              <p className="text-sm font-medium text-[#16A34A]">Booking created successfully! Redirecting...</p>
+            </div>
           </div>
         )}
 
         <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
-          {/* Booking Form */}
           <div className="lg:col-span-2">
-            <h1 className="text-3xl font-bold text-[#111512] dark:text-[#F8FAFC] mb-2">Book Your Space</h1>
-            <p className="text-[#555A56] dark:text-[#94A3B8] mb-8">
-              {place?.name || "Loading..."}
-            </p>
+            <div className="mb-8">
+              <h1 className="text-4xl font-bold text-[#4C1D95] dark:text-white mb-2">Book Your Space</h1>
+              <p className="text-lg text-[#475569] dark:text-[#94A3B8]">{place?.name || "Loading..."}</p>
+            </div>
 
-            <form onSubmit={handleSubmit} className="space-y-6">
-              {/* Date */}
-              <label className="block">
-                <span className="mb-2 block text-sm font-medium text-[#111512] dark:text-[#F8FAFC]">
-                  Booking Date
-                </span>
-                <div className="flex items-center gap-3 rounded-xl bg-[#F4F3EF] dark:bg-[#020617] px-4 py-3 focus-within:ring-2 focus-within:ring-[#063C2F] dark:focus-within:ring-[#14B8A6]">
-                  <Calendar className="h-5 w-5 text-[#777C78] dark:text-[#94A3B8] flex-shrink-0" />
-                  <input
-                    type="date"
-                    value={bookingDate}
-                    onChange={(e) => setBookingDate(e.target.value)}
-                    min={new Date().toISOString().split("T")[0]}
-                    className="w-full bg-transparent outline-none text-[#111512] dark:text-[#F8FAFC]"
-                    required
-                  />
+            {step === "booking" && (
+              <form onSubmit={handleSubmit} className="space-y-6">
+                <div>
+                  <label htmlFor="booking-date" className="mb-2 block text-sm font-semibold text-[#4C1D95] dark:text-white">
+                    Booking Date <span className="text-[#DC2626]">*</span>
+                  </label>
+                  <div className={`flex items-center gap-3 rounded-2xl bg-white dark:bg-[#0E1223] border-2 px-4 py-4 transition-all duration-200 ${fieldErrors.bookingDate ? "border-[#DC2626] focus-within:ring-2 focus-within:ring-[#DC2626]" : "border-[#DDD6FE] dark:border-[#334155] focus-within:ring-2 focus-within:ring-[#7C3AED]"}`}>
+                    <Calendar className="h-5 w-5 text-[#A78BFA] flex-shrink-0" />
+                    <input
+                      id="booking-date"
+                      type="date"
+                      value={bookingDate}
+                      onChange={(e) => setBookingDate(e.target.value)}
+                      onBlur={(e) => validateField("bookingDate", e.target.value)}
+                      min={new Date().toISOString().split("T")[0]}
+                      className="w-full bg-transparent outline-none text-[#4C1D95] dark:text-white"
+                      required
+                    />
+                  </div>
+                  {fieldErrors.bookingDate && <p className="mt-2 text-sm text-[#DC2626]">{fieldErrors.bookingDate}</p>}
                 </div>
-              </label>
 
-              {/* Start Time */}
-              <label className="block">
-                <span className="mb-2 block text-sm font-medium text-[#111512] dark:text-[#F8FAFC]">
-                  Start Time
-                </span>
-                <div className="flex items-center gap-3 rounded-xl bg-[#F4F3EF] dark:bg-[#020617] px-4 py-3 focus-within:ring-2 focus-within:ring-[#063C2F] dark:focus-within:ring-[#14B8A6]">
-                  <Clock className="h-5 w-5 text-[#777C78] dark:text-[#94A3B8] flex-shrink-0" />
-                  <input
-                    type="time"
-                    value={startTime}
-                    onChange={(e) => setStartTime(e.target.value)}
-                    className="w-full bg-transparent outline-none text-[#111512] dark:text-[#F8FAFC]"
-                    required
-                  />
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                  <div>
+                    <label htmlFor="start-time" className="mb-2 block text-sm font-semibold text-[#4C1D95] dark:text-white">
+                      Start Time <span className="text-[#DC2626]">*</span>
+                    </label>
+                    <div className={`flex items-center gap-3 rounded-2xl bg-white dark:bg-[#0E1223] border-2 px-4 py-4 transition-all duration-200 ${fieldErrors.startTime ? "border-[#DC2626] focus-within:ring-2 focus-within:ring-[#DC2626]" : "border-[#DDD6FE] dark:border-[#334155] focus-within:ring-2 focus-within:ring-[#7C3AED]"}`}>
+                      <Clock className="h-5 w-5 text-[#A78BFA] flex-shrink-0" />
+                      <input
+                        id="start-time"
+                        type="time"
+                        value={startTime}
+                        onChange={(e) => setStartTime(e.target.value)}
+                        onBlur={(e) => validateField("startTime", e.target.value)}
+                        className="w-full bg-transparent outline-none text-[#4C1D95] dark:text-white"
+                        required
+                      />
+                    </div>
+                    {fieldErrors.startTime && <p className="mt-2 text-sm text-[#DC2626]">{fieldErrors.startTime}</p>}
+                  </div>
+
+                  <div>
+                    <label htmlFor="end-time" className="mb-2 block text-sm font-semibold text-[#4C1D95] dark:text-white">
+                      End Time <span className="text-[#DC2626]">*</span>
+                    </label>
+                    <div className={`flex items-center gap-3 rounded-2xl bg-white dark:bg-[#0E1223] border-2 px-4 py-4 transition-all duration-200 ${fieldErrors.endTime ? "border-[#DC2626] focus-within:ring-2 focus-within:ring-[#DC2626]" : "border-[#DDD6FE] dark:border-[#334155] focus-within:ring-2 focus-within:ring-[#7C3AED]"}`}>
+                      <Clock className="h-5 w-5 text-[#A78BFA] flex-shrink-0" />
+                      <input
+                        id="end-time"
+                        type="time"
+                        value={endTime}
+                        onChange={(e) => setEndTime(e.target.value)}
+                        onBlur={(e) => validateField("endTime", e.target.value)}
+                        className="w-full bg-transparent outline-none text-[#4C1D95] dark:text-white"
+                        required
+                      />
+                    </div>
+                    {fieldErrors.endTime && <p className="mt-2 text-sm text-[#DC2626]">{fieldErrors.endTime}</p>}
+                  </div>
                 </div>
-              </label>
 
-              {/* End Time */}
-              <label className="block">
-                <span className="mb-2 block text-sm font-medium text-[#111512] dark:text-[#F8FAFC]">
-                  End Time
-                </span>
-                <div className="flex items-center gap-3 rounded-xl bg-[#F4F3EF] dark:bg-[#020617] px-4 py-3 focus-within:ring-2 focus-within:ring-[#063C2F] dark:focus-within:ring-[#14B8A6]">
-                  <Clock className="h-5 w-5 text-[#777C78] dark:text-[#94A3B8] flex-shrink-0" />
-                  <input
-                    type="time"
-                    value={endTime}
-                    onChange={(e) => setEndTime(e.target.value)}
-                    className="w-full bg-transparent outline-none text-[#111512] dark:text-[#F8FAFC]"
-                    required
-                  />
-                </div>
-              </label>
-
-              {/* Notes */}
-              <label className="block">
-                <span className="mb-2 block text-sm font-medium text-[#111512] dark:text-[#F8FAFC]">
-                  Notes (Optional)
-                </span>
-                <div className="flex gap-3 rounded-xl bg-[#F4F3EF] dark:bg-[#020617] px-4 py-3 focus-within:ring-2 focus-within:ring-[#063C2F] dark:focus-within:ring-[#14B8A6]">
-                  <FileText className="h-5 w-5 text-[#777C78] dark:text-[#94A3B8] flex-shrink-0 mt-1" />
-                  <textarea
-                    value={notes}
-                    onChange={(e) => setNotes(e.target.value)}
-                    placeholder="Add any special requests..."
-                    className="w-full bg-transparent outline-none text-[#111512] dark:text-[#F8FAFC] placeholder:text-[#9CA19E] dark:placeholder:text-[#64748B] resize-none h-20"
-                  />
-                </div>
-              </label>
-
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full flex items-center justify-center gap-2 rounded-xl bg-[#063C2F] dark:bg-[#14B8A6] px-5 py-4 font-semibold text-white dark:text-[#0B0F1C] shadow-md hover:bg-[#075342] dark:hover:bg-[#0FD9B8] active:scale-95 disabled:opacity-50 transition-all"
-              >
-                {loading ? (
-                  <>
-                    <Loader className="h-5 w-5 animate-spin" />
-                    Booking...
-                  </>
-                ) : (
-                  "Confirm Booking"
+                {duration > 0 && (
+                  <div className="rounded-2xl bg-[#F3E8FF] dark:bg-[#4C1D95]/20 border-2 border-[#A78BFA] p-4">
+                    <p className="text-sm font-medium text-[#4C1D95] dark:text-[#A78BFA]">
+                      Duration: <span className="font-bold">{Math.floor(duration / 60)}h {duration % 60}m</span>
+                    </p>
+                  </div>
                 )}
-              </button>
-            </form>
+
+                <div>
+                  <label htmlFor="notes" className="mb-2 block text-sm font-semibold text-[#4C1D95] dark:text-white">
+                    Notes (Optional)
+                  </label>
+                  <div className="flex gap-3 rounded-2xl bg-white dark:bg-[#0E1223] border-2 border-[#DDD6FE] dark:border-[#334155] px-4 py-4 focus-within:ring-2 focus-within:ring-[#7C3AED]">
+                    <FileText className="h-5 w-5 text-[#A78BFA] flex-shrink-0 mt-1" />
+                    <textarea
+                      id="notes"
+                      value={notes}
+                      onChange={(e) => setNotes(e.target.value)}
+                      placeholder="Add any special requests or requirements..."
+                      className="w-full bg-transparent outline-none text-[#4C1D95] dark:text-white placeholder:text-[#475569] dark:placeholder:text-[#64748B] resize-none h-24"
+                    />
+                  </div>
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={loading || !isBookingValid()}
+                  className="w-full flex items-center justify-center gap-2 rounded-2xl bg-[#16A34A] px-6 py-5 text-lg font-bold text-white shadow-lg hover:bg-[#15803D] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                >
+                  {loading ? <><Loader className="h-5 w-5 animate-spin" />Processing...</> : <><CheckCircle2 className="h-5 w-5" />Confirm Booking</>}
+                </button>
+              </form>
+            )}
           </div>
 
-          {/* Summary Sidebar */}
           <div className="lg:col-span-1">
-            <div className="sticky top-4 rounded-2xl border border-[#E7E5DE] dark:border-[#334155] bg-white dark:bg-[#0E1223] p-6">
-              <h2 className="text-lg font-bold text-[#111512] dark:text-[#F8FAFC] mb-4">Booking Summary</h2>
-
-              <div className="space-y-4 mb-6 pb-6 border-b border-[#E7E5DE] dark:border-[#334155]">
-                <div className="flex justify-between">
-                  <span className="text-sm text-[#555A56] dark:text-[#94A3B8]">Duration</span>
-                  <span className="text-sm font-semibold text-[#111512] dark:text-[#F8FAFC]">
-                    {duration} mins
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-sm text-[#555A56] dark:text-[#94A3B8]">Hourly Rate</span>
-                  <span className="text-sm font-semibold text-[#111512] dark:text-[#F8FAFC]">
-                    {place?.pricing && place.pricing.length > 0
-                      ? `IDR ${place.pricing[0].price.toLocaleString("id-ID")}`
-                      : "N/A"}
-                  </span>
-                </div>
+            <div className="sticky top-4 rounded-2xl border-2 border-[#DDD6FE] dark:border-[#334155] bg-white dark:bg-[#0E1223] p-6 shadow-xl">
+              <h2 className="text-xl font-bold text-[#4C1D95] dark:text-white mb-6">Booking Summary</h2>
+              {place && <div className="mb-6 pb-6 border-b-2 border-[#ECEEF9] dark:border-[#334155]"><p className="text-sm font-semibold text-[#A78BFA] mb-1">Place</p><p className="text-base font-bold text-[#4C1D95] dark:text-white">{place.name}</p></div>}
+              <div className="space-y-4 mb-6 pb-6 border-b-2 border-[#ECEEF9] dark:border-[#334155]">
+                {bookingDate && <div className="flex justify-between items-center"><span className="text-sm text-[#475569] dark:text-[#94A3B8]">Date</span><span className="text-sm font-semibold text-[#4C1D95] dark:text-white">{new Date(bookingDate).toLocaleDateString("id-ID", { weekday: "short", year: "numeric", month: "short", day: "numeric" })}</span></div>}
+                {startTime && endTime && <div className="flex justify-between items-center"><span className="text-sm text-[#475569] dark:text-[#94A3B8]">Time</span><span className="text-sm font-semibold text-[#4C1D95] dark:text-white">{startTime} - {endTime}</span></div>}
+                <div className="flex justify-between items-center"><span className="text-sm text-[#475569] dark:text-[#94A3B8]">Duration</span><span className={`text-sm font-semibold ${duration > 0 ? "text-[#7C3AED]" : "text-[#475569] dark:text-[#94A3B8]"}`}>{duration > 0 ? `${Math.floor(duration / 60)}h ${duration % 60}m` : "—"}</span></div>
+                <div className="flex justify-between items-center"><span className="text-sm text-[#475569] dark:text-[#94A3B8]">Hourly Rate</span><span className="text-sm font-semibold text-[#4C1D95] dark:text-white">{place?.pricing && place.pricing.length > 0 ? `IDR ${place.pricing[0].price.toLocaleString("id-ID")}` : "—"}</span></div>
               </div>
-
-              <div className="flex justify-between items-baseline">
-                <span className="text-lg font-bold text-[#111512] dark:text-[#F8FAFC]">Total</span>
-                <span className="text-2xl font-bold text-[#063C2F] dark:text-[#14B8A6]">
-                  IDR {totalAmount.toLocaleString("id-ID")}
-                </span>
+              <div className="rounded-2xl bg-gradient-to-br from-[#7C3AED] to-[#A78BFA] p-6">
+                <div className="flex justify-between items-baseline">
+                  <span className="text-lg font-bold text-white">Total</span>
+                  <div className="text-right"><p className="text-3xl font-bold text-white">IDR {totalAmount.toLocaleString("id-ID")}</p>{duration > 0 && <p className="text-xs text-white/80 mt-1">~IDR {Math.round(totalAmount / (duration / 60)).toLocaleString("id-ID")}/hour</p>}</div>
+                </div>
               </div>
             </div>
           </div>
