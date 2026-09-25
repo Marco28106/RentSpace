@@ -4,7 +4,7 @@ import React, { FormEvent, useState, useEffect } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { ArrowLeft, Calendar, Clock, FileText, Loader } from "lucide-react";
-import { createBooking, getPlace } from "../../../lib/api";
+import { createBooking, getPlace, PlaceResponse } from "../../../lib/api";
 import BrandMark from "../../../components/BrandMark";
 
 export default function BookingPage() {
