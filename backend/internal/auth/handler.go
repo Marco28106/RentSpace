@@ -32,7 +32,9 @@ func (h *Handler) RegisterRoutes(group *gin.RouterGroup) {
 		authGroup.POST("/login", h.Login)
 		authGroup.POST("/logout", h.AuthMiddleware(), h.Logout)
 		authGroup.GET("/me", h.AuthMiddleware(), h.Me)
+		authGroup.PATCH("/me", h.AuthMiddleware(), h.UpdateProfile)
 		authGroup.POST("/become-owner", h.AuthMiddleware(), h.BecomeOwner)
+		authGroup.POST("/upload-avatar", h.AuthMiddleware(), h.UploadAvatar)
 	}
 }
 
@@ -107,6 +109,62 @@ func (h *Handler) BecomeOwner(c *gin.Context) {
 	}
 
 	response.Success(c, http.StatusOK, "Upgraded to owner successfully", user)
+}
+
+func (h *Handler) UploadAvatar(c *gin.Context) {
+	userID, ok := c.Get("user_id")
+	if !ok {
+		response.Error(c, http.StatusUnauthorized, "Authentication required.", "UNAUTHORIZED", nil)
+		return
+	}
+
+	file, err := c.FormFile("avatar")
+	if err != nil {
+		response.Error(c, http.StatusBadRequest, "No file uploaded.", "BAD_REQUEST", nil)
+		return
+	}
+
+	if file.Size > 5*1024*1024 {
+		response.Error(c, http.StatusBadRequest, "File size must be less than 5MB.", "BAD_REQUEST", nil)
+		return
+	}
+
+	f, err := file.Open()
+	if err != nil {
+		response.Error(c, http.StatusBadRequest, "Could not open file.", "BAD_REQUEST", nil)
+		return
+	}
+	defer f.Close()
+
+	user, appErr := h.service.UpdateProfilePhoto(userID.(string), f, file.Filename)
+	if appErr != nil {
+		writeAppError(c, appErr)
+		return
+	}
+
+	response.Success(c, http.StatusOK, "Avatar uploaded successfully", user)
+}
+
+func (h *Handler) UpdateProfile(c *gin.Context) {
+	userID, ok := c.Get("user_id")
+	if !ok {
+		response.Error(c, http.StatusUnauthorized, "Authentication required.", "UNAUTHORIZED", nil)
+		return
+	}
+
+	var req UpdateProfileRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.Error(c, http.StatusBadRequest, "Invalid request body.", "BAD_REQUEST", nil)
+		return
+	}
+
+	user, appErr := h.service.UpdateProfile(userID.(string), req)
+	if appErr != nil {
+		writeAppError(c, appErr)
+		return
+	}
+
+	response.Success(c, http.StatusOK, "Profile updated successfully", user)
 }
 
 func (h *Handler) setAuthCookie(c *gin.Context, token string) {

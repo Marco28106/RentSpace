@@ -32,15 +32,15 @@ const features = [
 
 export default function WhyRentSpace() {
   return (
-    <section className="py-16">
+    <section id="how-it-works" className="py-16">
       <div className="text-center max-w-2xl mx-auto mb-12">
-        <span className="text-[11px] font-bold tracking-wider uppercase text-[#777C78]">
+        <span className="text-[11px] font-bold tracking-wider uppercase text-[#777C78] dark:text-[#94A3B8]">
           Standard of Quality
         </span>
-        <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-[#111512] mt-1">
+        <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-[#111512] dark:text-[#F8FAFC] mt-1">
           Why RentSpace
         </h2>
-        <p className="text-sm text-[#555A56] mt-2">
+        <p className="text-sm text-[#555A56] dark:text-[#94A3B8] mt-2">
           Engineered with the care of private concierges to guarantee zero friction from discovery to game time.
         </p>
       </div>
@@ -51,15 +51,15 @@ export default function WhyRentSpace() {
           return (
             <div
               key={i}
-              className="bg-white rounded-2xl p-6 border border-[#E7E5DE] hover:border-[#D8D6CE] transition-all flex flex-col"
+              className="bg-white dark:bg-[#0E1223] rounded-2xl p-6 border border-[#E7E5DE] dark:border-[#334155] hover:border-[#D8D6CE] dark:hover:border-[#64748B] transition-all flex flex-col"
             >
-              <div className="w-10 h-10 rounded-xl bg-[#FAF9F6] border border-[#E7E5DE] flex items-center justify-center text-[#063C2F] mb-4">
+              <div className="w-10 h-10 rounded-xl bg-[#FAF9F6] dark:bg-[#1A1E2F] border border-[#E7E5DE] dark:border-[#334155] flex items-center justify-center text-[#063C2F] dark:text-[#14B8A6] mb-4">
                 <Icon className="w-5 h-5 stroke-[1.75]" />
               </div>
-              <h3 className="text-base font-bold text-[#111512] mb-2">
+              <h3 className="text-base font-bold text-[#111512] dark:text-[#F8FAFC] mb-2">
                 {f.title}
               </h3>
-              <p className="text-xs text-[#555A56] leading-relaxed">
+              <p className="text-xs text-[#555A56] dark:text-[#94A3B8] leading-relaxed">
                 {f.description}
               </p>
             </div>

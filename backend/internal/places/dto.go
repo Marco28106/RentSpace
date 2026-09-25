@@ -4,16 +4,21 @@ import "time"
 
 // CreatePlaceRequest represents the request body for creating a place
 type CreatePlaceRequest struct {
-	CategoryID  string   `json:"category_id"`
-	Name        string   `json:"name"`
-	Description string   `json:"description"`
-	Address     string   `json:"address"`
-	City        string   `json:"city"`
-	District    *string  `json:"district,omitempty"`
-	Latitude    *float64 `json:"latitude,omitempty"`
-	Longitude   *float64 `json:"longitude,omitempty"`
-	Capacity    *int     `json:"capacity,omitempty"`
+    CategoryID  string   `json:"category_id"`
+    Name        string   `json:"name"`
+    Description string   `json:"description"`
+    Address     string   `json:"address"`
+    City        string   `json:"city"`
+    District    *string  `json:"district,omitempty"`
+    Latitude    *float64 `json:"latitude,omitempty"`
+    Longitude   *float64 `json:"longitude,omitempty"`
+    Capacity    *int     `json:"capacity,omitempty"`
+    Price       *int64   `json:"price,omitempty"`
+    Facilities  []string `json:"facilities,omitempty"`
+    ImageData   *string  `json:"image_data,omitempty"`
+    ImageURL    *string  `json:"image_url,omitempty"`
 }
+
 
 // UpdatePlaceRequest represents the request body for updating a place
 type UpdatePlaceRequest struct {
@@ -27,6 +32,7 @@ type UpdatePlaceRequest struct {
 	Longitude   *float64 `json:"longitude,omitempty"`
 	Capacity    *int     `json:"capacity,omitempty"`
 	Status      *string  `json:"status,omitempty"`
+	Price       *int64   `json:"price,omitempty"`
 }
 
 // CategoryResponse represents category data in place responses
@@ -75,6 +81,17 @@ type ReviewSummaryResponse struct {
 	ReviewCount   int     `json:"review_count"`
 }
 
+// OwnerInfoResponse represents owner data in place responses
+type OwnerInfoResponse struct {
+	Name         string  `json:"name"`
+	AvatarURL    *string `json:"avatar_url,omitempty"`
+	Phone        *string `json:"phone,omitempty"`
+	Verified     bool    `json:"verified"`
+	Superhost    bool    `json:"superhost"`
+	JoinDate     string  `json:"join_date"`
+	ResponseRate int     `json:"response_rate"`
+}
+
 // PlaceResponse represents the public place data returned to clients
 type PlaceResponse struct {
 	ID          string                   `json:"id"`
@@ -88,12 +105,14 @@ type PlaceResponse struct {
 	Latitude    *float64                 `json:"latitude,omitempty"`
 	Longitude   *float64                 `json:"longitude,omitempty"`
 	Capacity    *int                     `json:"capacity,omitempty"`
+	Price       int64                    `json:"price"`
+	ImageURL    *string                  `json:"image_url,omitempty"`
 	Status      string                   `json:"status"`
 	CreatedAt   time.Time                `json:"created_at"`
 	UpdatedAt   time.Time                `json:"updated_at"`
 
-	// Relations
 	Category       *CategoryResponse       `json:"category,omitempty"`
+	Owner          *OwnerInfoResponse      `json:"owner,omitempty"`
 	Images         []PlaceImageResponse    `json:"images,omitempty"`
 	Pricing        []PlacePricingResponse  `json:"pricing,omitempty"`
 	OperatingHours []OperatingHourResponse `json:"operating_hours,omitempty"`
@@ -108,7 +127,7 @@ type PlaceListItem struct {
 	Category    string   `json:"category"`
 	City        string   `json:"city"`
 	District    *string  `json:"district,omitempty"`
-	Price       *float64 `json:"price,omitempty"`
+	Price       *int64   `json:"price,omitempty"`
 	Rating      *float64 `json:"rating,omitempty"`
 	ReviewCount *int     `json:"review_count,omitempty"`
 	ImageURL    *string  `json:"image_url,omitempty"`

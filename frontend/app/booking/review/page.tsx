@@ -1,10 +1,39 @@
-import React from "react";
+"use client";
+
+import React, { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { ArrowRight, Calendar, Check, Clock, Mail, Phone, ShieldCheck, Users } from "lucide-react";
 import BookingSteps from "../../../components/BookingSteps";
 import { images } from "../../../lib/demo-data";
+import { useAuth } from "../../../context/AuthContext";
+import { createBooking } from "../../../lib/api";
 
 export default function ReviewBookingPage() {
+  const router = useRouter();
+  const { user } = useAuth();
+  const [notes, setNotes] = useState("Please prepare 2 sets of scrimmage bibs and official size-4 futsal match ball.");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  const handleCreateBooking = async () => {
+    setLoading(true);
+    setError("");
+    try {
+      const booking = await createBooking(
+        "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+        "2026-10-24",
+        "19:00",
+        "21:00",
+        notes
+      );
+      router.push(`/booking/payment?id=${booking.id}`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to create booking. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
       <div className="mb-8">
@@ -75,7 +104,7 @@ export default function ReviewBookingPage() {
           <section className="rounded-2xl bg-white p-6 shadow-sm">
             <h2 className="text-xl font-bold">Special Requests & Setup Notes</h2>
             <p className="mt-2 text-sm text-[#555A56]">Communicated directly to the venue operations manager prior to entry.</p>
-            <textarea className="mt-4 h-28 w-full rounded-xl bg-[#F4F3EF] p-4 outline-none" defaultValue="Please prepare 2 sets of scrimmage bibs and official size-4 futsal match ball." />
+            <textarea className="mt-4 h-28 w-full rounded-xl bg-[#F4F3EF] p-4 outline-none" value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Please prepare 2 sets of scrimmage bibs..." />
           </section>
 
           <section className="rounded-2xl bg-white p-6 shadow-sm">
@@ -121,9 +150,10 @@ export default function ReviewBookingPage() {
               <div><p className="text-xs uppercase tracking-wider text-[#555A56]">Total Payable</p><p className="text-xs text-[#777C78]">Includes local taxes</p></div>
               <p className="text-3xl font-bold">Rp 440.000</p>
             </div>
-            <Link href="/booking/payment" className="mt-6 flex items-center justify-center gap-2 rounded-xl bg-[#063C2F] py-4 font-semibold text-white hover:bg-[#075342]">
-              Continue to Payment <ArrowRight className="h-5 w-5" />
-            </Link>
+            {error && <p className="mt-4 rounded-xl bg-red-50 p-3 text-sm text-red-700">{error}</p>}
+            <button onClick={handleCreateBooking} disabled={loading} className="mt-6 flex w-full items-center justify-center gap-2 rounded-xl bg-[#063C2F] py-4 font-semibold text-white hover:bg-[#075342] disabled:opacity-50">
+              {loading ? "Creating Booking..." : "Continue to Payment"} <ArrowRight className="h-5 w-5" />
+            </button>
             <div className="mt-6 space-y-2 text-xs text-[#555A56]">
               <p><ShieldCheck className="mr-2 inline h-4 w-4 text-[#A58A54]" />256-bit bank grade SSL encryption</p>
               <p><Check className="mr-2 inline h-4 w-4 text-[#A58A54]" />RentSpace Escrow Protection until kickoff</p>

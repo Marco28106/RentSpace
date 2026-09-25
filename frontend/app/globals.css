@@ -3,16 +3,108 @@
 @tailwind utilities;
 
 @layer base {
+  :root {
+    --color-primary: #063C2F;
+    --color-on-primary: #FFFFFF;
+    --color-secondary: #0F766E;
+    --color-on-secondary: #FFFFFF;
+    --color-accent: #0369A1;
+    --color-on-accent: #FFFFFF;
+    --color-background: #FAF9F6;
+    --color-foreground: #111512;
+    --color-card: #FFFFFF;
+    --color-card-foreground: #111512;
+    --color-border: #E7E5DE;
+    --color-muted: #E8F0F3;
+    --color-muted-foreground: #555A56;
+    --color-destructive: #DC2626;
+    --color-on-destructive: #FFFFFF;
+  }
+
+  html.dark {
+    --color-primary: #14B8A6;
+    --color-on-primary: #0F172A;
+    --color-secondary: #06B6D4;
+    --color-on-secondary: #0F172A;
+    --color-accent: #38BDF8;
+    --color-on-accent: #0F172A;
+    --color-background: #020617;
+    --color-foreground: #F8FAFC;
+    --color-card: #0E1223;
+    --color-card-foreground: #F8FAFC;
+    --color-border: #334155;
+    --color-muted: #1A1E2F;
+    --color-muted-foreground: #94A3B8;
+    --color-destructive: #EF4444;
+    --color-on-destructive: #FFFFFF;
+  }
+
   html {
     scroll-behavior: smooth;
     font-feature-settings: "cv02", "cv03", "cv04", "cv11";
   }
 
   body {
-    background-color: #FAF9F6;
-    color: #111512;
+    background-color: var(--color-background);
+    color: var(--color-foreground);
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    line-height: 1.5;
+  }
+
+  :where(a, button, input, select, textarea):focus-visible {
+    outline: 3px solid rgba(6, 60, 47, 0.3);
+    outline-offset: 3px;
+  }
+
+  html.dark :where(a, button, input, select, textarea):focus-visible {
+    outline: 3px solid rgba(20, 184, 166, 0.3);
+  }
+
+  :where(button, a, select, input, textarea) {
+    transition-property: color, background-color, border-color, box-shadow, opacity, transform;
+    transition-duration: 180ms;
+    transition-timing-function: ease-out;
+  }
+
+  ::selection {
+    background: #DCEBE5;
+    color: #063C2F;
+  }
+
+  html.dark ::selection {
+    background: rgba(20, 184, 166, 0.3);
+    color: #F0FDFA;
+  }
+
+  @keyframes nav-underline {
+    from {
+      transform: scaleX(0);
+      transform-origin: left;
+    }
+    to {
+      transform: scaleX(1);
+      transform-origin: left;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
+
+    :where(button, a, select, input, textarea) {
+      transition-duration: 0ms;
+    }
+
+    @keyframes nav-underline {
+      from {
+        transform: scaleX(1);
+      }
+      to {
+        transform: scaleX(1);
+      }
+    }
   }
 }
 
@@ -22,12 +114,12 @@
   height: 6px;
 }
 ::-webkit-scrollbar-track {
-  background: #FAF9F6;
+  background: var(--color-background);
 }
 ::-webkit-scrollbar-thumb {
-  background: #D8D6CE;
+  background: var(--color-border);
   border-radius: 9999px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #063C2F;
+  background: var(--color-primary);
 }

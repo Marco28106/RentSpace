@@ -8,11 +8,11 @@ export function middleware(request: NextRequest) {
   const token = request.cookies.get("rentspace_token")?.value;
   const isPublicRoute = publicRoutes.includes(pathname);
 
-  if (!token && !isPublicRoute) {
+  if (!token && (pathname === "/" || !isPublicRoute)) {
     return NextResponse.redirect(new URL("/login", request.url));
   }
 
-  if (token && isPublicRoute && pathname !== "/become-owner" && pathname !== "/register") {
+  if (token && isPublicRoute && pathname !== "/become-owner" && pathname !== "/register" && pathname !== "/login") {
     return NextResponse.redirect(new URL("/", request.url));
   }
 

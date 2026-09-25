@@ -24,12 +24,14 @@ func (h *Handler) RegisterRoutes(group *gin.RouterGroup, authMiddleware gin.Hand
 	// Public place routes
 	group.GET("/places", h.ListPublicPlaces)
 	group.GET("/places/:id", h.GetPublicPlace)
+	group.GET("/places/:id/availability", h.GetAvailability)
 
 	// Owner place management routes
 	ownerGroup := group.Group("/owner/places")
 	ownerGroup.Use(authMiddleware, requireOwner)
 	{
 		ownerGroup.POST("", h.CreatePlace)
+		ownerGroup.POST("/:id/image", h.UploadPlaceImage)
 		ownerGroup.GET("", h.ListOwnerPlaces)
 		ownerGroup.GET("/:id", h.GetOwnerPlace)
 		ownerGroup.PATCH("/:id", h.UpdatePlace)
@@ -174,6 +176,29 @@ func (h *Handler) GetPublicPlace(c *gin.Context) {
 	response.Success(c, http.StatusOK, "Place retrieved successfully", place)
 }
 
+func (h *Handler) UploadPlaceImage(c *gin.Context) {
+	userID, ok := c.Get("user_id")
+	if !ok {
+		response.Error(c, http.StatusUnauthorized, "Authentication required.", "UNAUTHORIZED", nil)
+		return
+	}
+
+	placeID := c.Param("id")
+	file, err := c.FormFile("image")
+	if err != nil {
+		response.Error(c, http.StatusBadRequest, "No image provided.", "BAD_REQUEST", nil)
+		return
+	}
+
+	appErr := h.service.UploadPlaceImage(userID.(string), placeID, file, c)
+	if appErr != nil {
+		writeAppError(c, appErr)
+		return
+	}
+
+	response.Success(c, http.StatusOK, "Image uploaded successfully", nil)
+}
+
 func getPaginationParams(c *gin.Context) (int, int) {
 	page, err := strconv.Atoi(c.DefaultQuery("page", "1"))
 	if err != nil || page < 1 {
@@ -201,13 +226,13 @@ func parsePlaceFilter(c *gin.Context) PlaceFilter {
 	}
 
 	if minPrice := c.Query("min_price"); minPrice != "" {
-		if val, err := strconv.ParseFloat(minPrice, 64); err == nil {
+		if val, err := strconv.ParseInt(minPrice, 10, 64); err == nil {
 			filter.MinPrice = &val
 		}
 	}
 
 	if maxPrice := c.Query("max_price"); maxPrice != "" {
-		if val, err := strconv.ParseFloat(maxPrice, 64); err == nil {
+		if val, err := strconv.ParseInt(maxPrice, 10, 64); err == nil {
 			filter.MaxPrice = &val
 		}
 	}
@@ -229,4 +254,24 @@ func parsePlaceFilter(c *gin.Context) PlaceFilter {
 
 func writeAppError(c *gin.Context, appErr *AppError) {
 	response.Error(c, appErr.StatusCode, appErr.Message, appErr.Code, nil)
+}
+
+func (h *Handler) GetAvailability(c *gin.Context) {
+	placeID := c.Param("id")
+	date := c.Query("date")
+	
+	if date == "" {
+		response.Error(c, http.StatusBadRequest, "Date parameter is required.", "BAD_REQUEST", nil)
+		return
+	}
+
+	slots, appErr := h.service.GetAvailability(placeID, date)
+	if appErr != nil {
+		writeAppError(c, appErr)
+		return
+	}
+
+	response.Success(c, http.StatusOK, "Availability retrieved successfully", gin.H{
+		"slots": slots,
+	})
 }

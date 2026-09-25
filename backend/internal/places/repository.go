@@ -21,9 +21,21 @@ func (r *Repository) CreatePlace(place *model.Place) error {
 	return r.db.Create(place).Error
 }
 
+func (r *Repository) CreatePlaceImage(image *model.PlaceImage) error {
+	return r.db.Create(image).Error
+}
+
+func (r *Repository) CreatePlacePricing(pricing *model.PlacePricing) error {
+	return r.db.Create(pricing).Error
+}
+
+func (r *Repository) UpdatePricingByPlaceID(placeID uuid.UUID, price int64) error {
+	return r.db.Model(&model.PlacePricing{}).Where("place_id = ?", placeID).Update("price", price).Error
+}
+
 func (r *Repository) FindPlaceByID(id uuid.UUID) (*model.Place, error) {
 	var place model.Place
-	if err := r.db.Preload("Category").Preload("Images").Preload("Pricing").Preload("OperatingHours").Preload("Facilities").Preload("Reviews").First(&place, "id = ?", id).Error; err != nil {
+	if err := r.db.Preload("Category").Preload("Images").Preload("Pricing").Preload("OperatingHours").Preload("Facilities").Preload("Reviews").Preload("Owner.OwnerProfile").First(&place, "id = ?", id).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, nil
 		}
@@ -47,7 +59,7 @@ func (r *Repository) ListOwnerPlaces(ownerID uuid.UUID, page int, limit int) ([]
 	offset := (page - 1) * limit
 
 	var places []model.Place
-	if err := r.db.Where("owner_id = ?", ownerID).Order("created_at DESC").Limit(limit).Offset(offset).Find(&places).Error; err != nil {
+	if err := r.db.Where("owner_id = ?", ownerID).Preload("Category").Preload("Images").Order("created_at DESC").Limit(limit).Offset(offset).Find(&places).Error; err != nil {
 		return nil, 0, err
 	}
 
@@ -57,6 +69,14 @@ func (r *Repository) ListOwnerPlaces(ownerID uuid.UUID, page int, limit int) ([]
 	}
 
 	return places, total, nil
+}
+
+func (r *Repository) GetBookingsByDate(placeID uuid.UUID, date string) ([]model.Booking, error) {
+	var bookings []model.Booking
+	if err := r.db.Where("place_id = ? AND booking_date = ?", placeID, date).Find(&bookings).Error; err != nil {
+		return nil, err
+	}
+	return bookings, nil
 }
 
 func (r *Repository) UpdatePlace(place *model.Place) error {
@@ -94,8 +114,8 @@ type PlaceFilter struct {
 	Search    string
 	Category  string
 	City      string
-	MinPrice  *float64
-	MaxPrice  *float64
+	MinPrice  *int64
+	MaxPrice  *int64
 	MinRating *float64
 	Capacity  *int
 	Facility  string
@@ -125,14 +145,13 @@ func (r *Repository) ListPlaces(filter PlaceFilter, page int, limit int) ([]mode
 		query = query.Where("city ILIKE ?", "%"+strings.TrimSpace(filter.City)+"%")
 	}
 
-	// Apply price filters via place_pricing
+	// Apply price filters via places.price
 	if filter.MinPrice != nil || filter.MaxPrice != nil {
-		query = query.Joins("JOIN place_pricing ON place_pricing.place_id = places.id")
 		if filter.MinPrice != nil {
-			query = query.Where("place_pricing.price >= ?", *filter.MinPrice)
+			query = query.Where("price >= ?", *filter.MinPrice)
 		}
 		if filter.MaxPrice != nil {
-			query = query.Where("place_pricing.price <= ?", *filter.MaxPrice)
+			query = query.Where("price <= ?", *filter.MaxPrice)
 		}
 	}
 
@@ -164,9 +183,9 @@ func (r *Repository) ListPlaces(filter PlaceFilter, page int, limit int) ([]mode
 	// Apply sorting
 	switch filter.Sort {
 	case "price_low":
-		query = query.Order("place_pricing.price ASC")
+		query = query.Order("price ASC")
 	case "price_high":
-		query = query.Order("place_pricing.price DESC")
+		query = query.Order("price DESC")
 	case "rating":
 		query = query.Order("rating DESC")
 	case "newest":
@@ -177,7 +196,7 @@ func (r *Repository) ListPlaces(filter PlaceFilter, page int, limit int) ([]mode
 
 	// Apply pagination
 	var places []model.Place
-	if err := query.Preload("Category").Preload("Images").Preload("Pricing").Limit(limit).Offset(offset).Find(&places).Error; err != nil {
+	if err := query.Select("places.*").Preload("Category").Preload("Images").Preload("Pricing").Limit(limit).Offset(offset).Find(&places).Error; err != nil {
 		return nil, 0, err
 	}
 

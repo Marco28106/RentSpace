@@ -28,6 +28,9 @@ func SetupRouter(cfg *config.Config, db *gorm.DB) *gin.Engine {
 	r.Use(gin.Recovery())
 	r.Use(middleware.CORSMiddleware(cfg.CORS.AllowedOrigins))
 
+	// Static uploads directory
+	r.Static("/uploads", "./uploads")
+
 	// Root Health Check
 	r.GET("/health", func(c *gin.Context) {
 		response.Success(c, http.StatusOK, "RentSpace API is operational", gin.H{

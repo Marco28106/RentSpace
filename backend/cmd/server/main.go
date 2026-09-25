@@ -9,6 +9,7 @@ import (
 )
 
 func main() {
+
 	// 1. Load configuration
 	cfg := config.LoadConfig()
 	log.Printf("Starting %s in %s mode\n", cfg.App.Name, cfg.App.Env)
@@ -31,6 +32,9 @@ func main() {
 			log.Printf("Error running seed: %v", err)
 		} else {
 			log.Println("Seed completed")
+		}
+		if err := database.EnsurePricing(db); err != nil {
+			log.Printf("Error seeding pricing: %v", err)
 		}
 	}
 

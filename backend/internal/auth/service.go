@@ -1,9 +1,14 @@
 package auth
 
 import (
+	"fmt"
+	"io"
 	"net/http"
 	"net/mail"
+	"os"
+	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/Marco28106/rentspace/backend/internal/model"
 	"github.com/google/uuid"
@@ -186,6 +191,7 @@ func mapUserResponse(user *model.User) UserResponse {
 		ID:        user.ID.String(),
 		Name:      user.Name,
 		Email:     user.Email,
+		Phone:     user.Phone,
 		Role:      user.Role,
 		AvatarURL: user.AvatarURL,
 	}
@@ -209,4 +215,113 @@ func isValidEmail(email string) bool {
 	}
 	parsed, err := mail.ParseAddress(email)
 	return err == nil && parsed.Address == email
+}
+
+func (s *Service) UpdateProfilePhoto(userID string, fileData io.ReadCloser, filename string) (*UserResponse, *AppError) {
+	parsedID, err := uuid.Parse(userID)
+	if err != nil {
+		return nil, newAppError(http.StatusUnauthorized, "Authentication required.", "UNAUTHORIZED")
+	}
+
+	user, err := s.repo.FindUserByID(parsedID)
+	if err != nil {
+		return nil, newAppError(http.StatusInternalServerError, "Could not load account.", "INTERNAL_ERROR")
+	}
+	if user == nil || !user.IsActive {
+		return nil, newAppError(http.StatusUnauthorized, "Authentication required.", "UNAUTHORIZED")
+	}
+
+	ext := filepath.Ext(filename)
+	validExts := map[string]bool{".jpg": true, ".jpeg": true, ".png": true, ".gif": true, ".webp": true}
+	if !validExts[strings.ToLower(ext)] {
+		return nil, newAppError(http.StatusUnprocessableEntity, "Only image files (jpg, png, gif, webp) allowed.", "INVALID_FILE_TYPE")
+	}
+
+	uploadDir := "uploads/avatars"
+	if err := os.MkdirAll(uploadDir, 0755); err != nil {
+		return nil, newAppError(http.StatusInternalServerError, "Could not create upload directory.", "INTERNAL_ERROR")
+	}
+
+	oldFilePath := ""
+	if user.AvatarURL != nil && strings.HasPrefix(*user.AvatarURL, "/uploads") {
+		oldFilePath = strings.TrimPrefix(*user.AvatarURL, "/")
+	}
+
+	newFilename := fmt.Sprintf("%s-%d%s", parsedID.String(), time.Now().UnixNano(), ext)
+	newFilePath := filepath.Join(uploadDir, newFilename)
+
+	file, err := os.Create(newFilePath)
+	if err != nil {
+		return nil, newAppError(http.StatusInternalServerError, "Could not save file.", "INTERNAL_ERROR")
+	}
+	defer file.Close()
+
+	if _, err := io.Copy(file, fileData); err != nil {
+		os.Remove(newFilePath)
+		return nil, newAppError(http.StatusInternalServerError, "Could not save file.", "INTERNAL_ERROR")
+	}
+
+	if oldFilePath != "" {
+		os.Remove(oldFilePath)
+	}
+
+	avatarURL := "/" + newFilePath
+	user.AvatarURL = &avatarURL
+
+	if err := s.repo.UpdateUser(user); err != nil {
+		os.Remove(newFilePath)
+		return nil, newAppError(http.StatusInternalServerError, "Could not update profile.", "INTERNAL_ERROR")
+	}
+
+	response := mapUserResponse(user)
+	return &response, nil
+}
+
+func (s *Service) UpdateProfile(userID string, req UpdateProfileRequest) (*UserResponse, *AppError) {
+	parsedID, err := uuid.Parse(userID)
+	if err != nil {
+		return nil, newAppError(http.StatusUnauthorized, "Authentication required.", "UNAUTHORIZED")
+	}
+
+	user, err := s.repo.FindUserByID(parsedID)
+	if err != nil {
+		return nil, newAppError(http.StatusInternalServerError, "Could not load account.", "INTERNAL_ERROR")
+	}
+	if user == nil || !user.IsActive {
+		return nil, newAppError(http.StatusUnauthorized, "Authentication required.", "UNAUTHORIZED")
+	}
+
+	name := strings.TrimSpace(req.Name)
+	if len(name) < 2 {
+		return nil, newAppError(http.StatusUnprocessableEntity, "Name must be at least 2 characters.", "VALIDATION_ERROR")
+	}
+
+	email := normalizeEmail(req.Email)
+	if !isValidEmail(email) {
+		return nil, newAppError(http.StatusUnprocessableEntity, "Email must be valid.", "VALIDATION_ERROR")
+	}
+
+	if email != user.Email {
+		existing, _ := s.repo.FindUserByEmail(email)
+		if existing != nil {
+			return nil, newAppError(http.StatusUnprocessableEntity, "Email already in use.", "EMAIL_EXISTS")
+		}
+	}
+
+	phone := strings.TrimSpace(req.Phone)
+	var phonePtr *string
+	if phone != "" {
+		phonePtr = &phone
+	}
+
+	user.Name = name
+	user.Email = email
+	user.Phone = phonePtr
+
+	if err := s.repo.UpdateUser(user); err != nil {
+		return nil, newAppError(http.StatusInternalServerError, "Could not update profile.", "INTERNAL_ERROR")
+	}
+
+	response := mapUserResponse(user)
+	return &response, nil
 }

@@ -1,10 +1,43 @@
-import React from "react";
+"use client";
+
+import React, { useEffect, useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { CalendarDays, Check, Download, MapPin, QrCode, ShieldCheck } from "lucide-react";
 import BookingSteps from "../../../components/BookingSteps";
 import { images } from "../../../lib/demo-data";
+import { getBooking, getPayment, type BookingResponse, type PaymentResponse } from "../../../lib/api";
 
 export default function BookingConfirmationPage() {
+  const searchParams = useSearchParams();
+  const bookingId = searchParams.get("id");
+  const [booking, setBooking] = useState<BookingResponse | null>(null);
+  const [payment, setPayment] = useState<PaymentResponse | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!bookingId) return;
+    const load = async () => {
+      try {
+        const [bookingData, paymentData] = await Promise.all([
+          getBooking(bookingId),
+          getPayment(bookingId),
+        ]);
+        setBooking(bookingData);
+        setPayment(paymentData);
+      } catch (err) {
+        console.error("Failed to load booking", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    load();
+  }, [bookingId]);
+
+  if (!bookingId) return <div className="mx-auto max-w-5xl px-4 py-10 text-center">Booking ID missing</div>;
+  if (loading) return <div className="mx-auto max-w-5xl px-4 py-10 text-center">Loading confirmation...</div>;
+  if (!booking) return <div className="mx-auto max-w-5xl px-4 py-10 text-center">Booking not found</div>;
+
   return (
     <div className="mx-auto max-w-5xl px-4 py-10 sm:px-6 lg:px-8">
       <BookingSteps current={4} />
@@ -24,29 +57,31 @@ export default function BookingConfirmationPage() {
 
       <section className="mx-auto mt-10 overflow-hidden rounded-2xl bg-white shadow-sm">
         <div className="flex items-center justify-between bg-[#F4F3EF] px-6 py-5">
-          <p className="text-sm uppercase tracking-wider">Reference: <span className="font-bold tracking-normal text-[#111512]">#RS-992014</span></p>
-          <span className="rounded-full bg-[#063C2F] px-4 py-1.5 text-sm font-semibold text-white">Status: Confirmed</span>
+          <p className="text-sm uppercase tracking-wider">Reference: <span className="font-bold tracking-normal text-[#111512]">#{booking.id.slice(0, 12)}</span></p>
+          <span className="rounded-full bg-[#063C2F] px-4 py-1.5 text-sm font-semibold text-white">Status: {booking.status}</span>
         </div>
         <div className="p-6">
           <div className="flex flex-col gap-5 sm:flex-row sm:items-center">
-            <img src={images.court} alt="Urban Arena" className="h-28 w-32 rounded-xl object-cover" />
+            <div className="h-28 w-32 rounded-xl bg-[#F4F3EF] flex items-center justify-center">
+              <p className="text-[#777C78] text-sm">Place Image</p>
+            </div>
             <div className="flex-1">
-              <p className="text-xs font-bold uppercase tracking-wider text-[#A58A54]">Athletic Sanctuaries - Court 01</p>
-              <h2 className="text-2xl font-bold">Urban Arena Futsal & Athletics Complex</h2>
-              <p className="mt-1 text-sm text-[#555A56]"><MapPin className="mr-1 inline h-4 w-4" />Puri Indah, Kembangan, Jakarta Barat</p>
+              <p className="text-xs font-bold uppercase tracking-wider text-[#A58A54]">Booking Confirmed</p>
+              <h2 className="text-2xl font-bold">Booking #{booking.id.slice(0, 8)}</h2>
+              <p className="mt-1 text-sm text-[#555A56]"><MapPin className="mr-1 inline h-4 w-4" />Place ID: {booking.place_id}</p>
             </div>
             <div className="text-right">
-              <p className="rounded-md bg-[#F4F3EF] px-3 py-1 text-xs uppercase tracking-wider">Standard Match Rate</p>
-              <p className="mt-2 text-2xl font-bold">Rp 170.000<span className="text-sm font-normal text-[#777C78]">/hr</span></p>
+              <p className="rounded-md bg-[#F4F3EF] px-3 py-1 text-xs uppercase tracking-wider">Total Paid</p>
+              <p className="mt-2 text-2xl font-bold">Rp {booking.total_amount.toLocaleString("id-ID")}</p>
             </div>
           </div>
 
           <div className="mt-8 grid gap-4 border-y border-[#E7E5DE] py-6 sm:grid-cols-4">
             {[
-              ["Date", "Friday", "Oct 24, 2025"],
-              ["Time Window", "19:00 - 21:00", "2.0 Hours (WIB)"],
-              ["Roster Limit", "10 Players", "Full Pitch Access"],
-              ["Total Paid", "Rp 340.000", "Paid via QRIS"],
+              ["Date", booking.booking_date, booking.booking_date],
+              ["Time Window", `${booking.start_time} - ${booking.end_time}`, `${booking.duration_minutes} Minutes`],
+              ["Payment", payment?.status || "PENDING", payment?.provider || "N/A"],
+              ["Total Paid", `Rp ${booking.total_amount.toLocaleString("id-ID")}`, "Confirmed"],
             ].map(([label, value, hint]) => (
               <div key={label}>
                 <p className="text-xs uppercase tracking-wider text-[#555A56]">{label}</p>

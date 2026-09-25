@@ -188,7 +188,27 @@ func seedPlaces(db *gorm.DB) error {
 		return err
 	}
 
-	log.Printf("Seeded %d places\n", len(places))
+	// Seed pricing for places
+	var place model.Place
+	if err := db.First(&place).Error; err != nil {
+		return err
+	}
+
+	pricings := []model.PlacePricing{
+		{PlaceID: place.ID, DayOfWeek: 0, StartTime: "08:00", EndTime: "23:59", Price: 150000},
+		{PlaceID: place.ID, DayOfWeek: 1, StartTime: "08:00", EndTime: "23:59", Price: 150000},
+		{PlaceID: place.ID, DayOfWeek: 2, StartTime: "08:00", EndTime: "23:59", Price: 150000},
+		{PlaceID: place.ID, DayOfWeek: 3, StartTime: "08:00", EndTime: "23:59", Price: 150000},
+		{PlaceID: place.ID, DayOfWeek: 4, StartTime: "08:00", EndTime: "23:59", Price: 150000},
+		{PlaceID: place.ID, DayOfWeek: 5, StartTime: "08:00", EndTime: "23:59", Price: 175000},
+		{PlaceID: place.ID, DayOfWeek: 6, StartTime: "08:00", EndTime: "23:59", Price: 175000},
+	}
+
+	if err := db.Create(&pricings).Error; err != nil {
+		return err
+	}
+
+	log.Printf("Seeded %d places with pricing\n", len(places))
 	return nil
 }
 

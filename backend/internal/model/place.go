@@ -37,12 +37,13 @@ type Place struct {
 	Latitude    *float64       `gorm:"type:decimal(10,8)" json:"latitude,omitempty"`
 	Longitude   *float64       `gorm:"type:decimal(11,8)" json:"longitude,omitempty"`
 	Capacity    *int           `gorm:"type:integer" json:"capacity,omitempty"`
+	Price       int64          `gorm:"type:bigint;default:0" json:"price"`
+	ImageURL    *string        `gorm:"type:text" json:"image_url,omitempty"`
 	Status      string         `gorm:"type:varchar(20);not null;default:'ACTIVE';index" json:"status"`
 	CreatedAt   time.Time      `gorm:"not null;autoCreateTime" json:"created_at"`
 	UpdatedAt   time.Time      `gorm:"not null;autoUpdateTime" json:"updated_at"`
 	DeletedAt   gorm.DeletedAt `gorm:"index" json:"-"`
 
-	// Relations
 	Owner              User               `gorm:"foreignKey:OwnerID;references:ID" json:"owner,omitempty"`
 	Category           Category           `gorm:"foreignKey:CategoryID" json:"category,omitempty"`
 	Images             []PlaceImage       `gorm:"foreignKey:PlaceID" json:"images,omitempty"`
@@ -70,7 +71,7 @@ type PlaceImage struct {
 	CreatedAt time.Time `gorm:"not null;autoCreateTime" json:"created_at"`
 }
 
-// PlacePricing represents the place_pricing table
+// PlacePricing represents the place_pricings table
 type PlacePricing struct {
 	ID        uuid.UUID `gorm:"type:uuid;primaryKey;default:gen_random_uuid()" json:"id"`
 	PlaceID   uuid.UUID `gorm:"type:uuid;not null;index" json:"place_id"`
@@ -80,6 +81,10 @@ type PlacePricing struct {
 	Price     float64   `gorm:"type:decimal(12,2);not null" json:"price"`
 	CreatedAt time.Time `gorm:"not null;autoCreateTime" json:"created_at"`
 	UpdatedAt time.Time `gorm:"not null;autoUpdateTime" json:"updated_at"`
+}
+
+func (PlacePricing) TableName() string {
+	return "place_pricings"
 }
 
 // OperatingHour represents the operating_hours table

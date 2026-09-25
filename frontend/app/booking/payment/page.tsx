@@ -1,10 +1,62 @@
-import React from "react";
+"use client";
+
+import React, { useEffect, useState } from "react";
 import Link from "next/link";
+import { apiRequest } from "@/lib/api";
+import { useRouter, useSearchParams } from "next/navigation";
+
 import { ArrowRight, Banknote, Calendar, ChevronDown, Clock, CreditCard, Lock, QrCode, ShieldCheck, Wallet } from "lucide-react";
 import BookingSteps from "../../../components/BookingSteps";
 import { images } from "../../../lib/demo-data";
+import { getBooking, getPayment, type BookingResponse, type PaymentResponse } from "../../../lib/api";
 
 export default function PaymentPage() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const bookingId = searchParams.get("id");
+  const [booking, setBooking] = useState<BookingResponse | null>(null);
+  const [payment, setPayment] = useState<PaymentResponse | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!bookingId) return;
+
+    const load = async () => {
+      try {
+        const [bookingData, paymentData] = await Promise.all([
+          getBooking(bookingId),
+          getPayment(bookingId),
+        ]);
+        setBooking(bookingData);
+        setPayment(paymentData);
+        if (paymentData.status === "PAID") {
+          router.push(`/booking/confirmation?id=${bookingId}`);
+        }
+      } catch (err) {
+        console.error("Failed to load payment", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    load();
+  }, [bookingId]);
+
+  const handlePaymentSuccess = async () => {
+    try {
+      await apiRequest(`/bookings/${bookingId}/notify-owner`, { method: "POST" });
+      router.push(`/booking/confirmation?id=${bookingId}`);
+    } catch (err) {
+      console.error("Notification failed:", err);
+      router.push(`/booking/confirmation?id=${bookingId}`);
+    }
+  };
+
+  if (!bookingId) return <div className="mx-auto max-w-7xl px-4 py-8 text-center">Booking ID missing</div>;
+  if (loading) return <div className="mx-auto max-w-7xl px-4 py-8 text-center">Loading payment...</div>;
+
+  const total = payment?.amount || booking?.total_amount || 0;
+
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
       <div className="mb-10 grid gap-6 lg:grid-cols-[1fr_1.2fr] lg:items-end">
@@ -122,11 +174,14 @@ export default function PaymentPage() {
             </div>
             <div className="mt-8">
               <p className="text-xs font-bold uppercase tracking-wider">Total Amount Due</p>
-              <p className="mt-1 text-4xl font-bold">Rp 340.000</p>
+              <p className="mt-1 text-4xl font-bold">Rp {total.toLocaleString("id-ID")}</p>
             </div>
-            <Link href="/booking/confirmation" className="mt-6 flex items-center justify-center gap-2 rounded-xl bg-[#063C2F] py-4 text-lg font-bold text-white hover:bg-[#075342]">
-              Pay Now - Rp 340.000 <ArrowRight className="h-5 w-5" />
-            </Link>
+            <button className="mt-6 flex w-full items-center justify-center gap-2 rounded-xl bg-[#063C2F] py-4 text-lg font-bold text-white hover:bg-[#075342]" onClick={handlePaymentSuccess}>
+              Pay Now - Rp {total.toLocaleString("id-ID")} <ArrowRight className="h-5 w-5" />
+            </button>
+            <div className="mt-6 rounded-xl bg-[#F4F3EF] p-4 text-center text-sm text-[#555A56]">
+              Payment status: <span className="font-bold text-[#063C2F]">{payment?.status || "PENDING"}</span>. This page checks payment confirmation automatically every 5 seconds.
+            </div>
             <div className="mt-5 rounded-xl bg-[#F4F3EF] p-4 text-sm text-[#555A56]">
               RentSpace Escrow Guarantee: Funds are held securely and only released to the venue host after check-in.
             </div>
